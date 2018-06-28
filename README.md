@@ -1,7 +1,7 @@
 # Wieldy
 The easy to use, lightwight, and especially lovable reactive framework... You're welcome :)
 
-# Setting the scope
+## Setting the scope
 
 Defining a wieldy scope is stupid easy:
 ```js
@@ -43,7 +43,7 @@ Simple Example Application:
 ```
 
 
-## Using Wieldables
+# Using Wieldables
 
 What is a wieldable?
 A wieldable is a wieldy observable: an entity that can be observed and controlled easily.
