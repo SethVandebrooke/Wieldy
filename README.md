@@ -7,7 +7,7 @@ Defining a wieldy scope is stupid easy:
 ```js
 var app = new WieldyScope(document.body);
 ```
-You can preset wieldables in for the scope by passing an object to the scope constructor:
+You can preset wieldables for the scope by passing an object to the scope constructor:
 ```js
 var app = new WieldyScope(document.body, {
   title: "This is the title"
