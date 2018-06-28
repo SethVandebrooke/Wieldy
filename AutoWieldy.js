@@ -4,7 +4,7 @@
 var Wieldable = function(v){
   var d, l = [], t = () => {
     for (var i = 0; i < l.length; i++) {
-      if (typeof l[i] == "function") {
+      if (typeof l[i] === "function") {
         l[i](d);
       }
     }
@@ -16,8 +16,7 @@ var Wieldable = function(v){
       d = v;
       if (v instanceof Array) {
         function arrayFunc(func, ...params) {
-          var r = d[func](...params);
-          t();
+          var r = d[func](...params); t();
           return r;
         }
         wieldable.push    =  function ( ...params ) { arrayFunc( 'push',    ...params ) }
@@ -26,39 +25,44 @@ var Wieldable = function(v){
         wieldable.unshift =  function ( ...params ) { arrayFunc( 'unshift', ...params ) }
         wieldable.splice  =  function ( ...params ) { arrayFunc( 'splice',  ...params ) }
         wieldable.slice   =  function ( ...params ) { arrayFunc( 'slice',   ...params ) }
-        Object.defineProperty(wieldable, 'length', { get: function() { return d.length; } });
-      } else if (typeof v == "object") {
+        Object.defineProperty(wieldable, 'length',  { get: function(){ return d.length; } });
+      } else if (typeof v === "object") {
         for (var k in v) {
-          d[k] = new Wieldable(v[k]);
+          wieldable[k] = new Wieldable(v[k]);
         }
-        wieldable.object = () => {
-          var o = {};
-          for (var k in d) {
-            o[k] = d[k]();
-          }
-          return o;
-        };
       } else { // Clear out helper functions if there
-        delete wieldable.push;
-        delete wieldable.pop;
-        delete wieldable.shift;
-        delete wieldable.unshift;
-        delete wieldable.splice;
-        delete wieldable.slice;
-        delete wieldable.object;
+        if (wieldable.push)    { delete wieldable.push;    }
+        if (wieldable.pop)     { delete wieldable.pop;     }
+        if (wieldable.shift)   { delete wieldable.shift;   }
+        if (wieldable.unshift) { delete wieldable.unshift; }
+        if (wieldable.splice)  { delete wieldable.splice;  }
+        if (wieldable.slice)   { delete wieldable.slice;   }
       }
       t();
     }
+    if ("object" === typeof d) {
+      var o = {};
+      for (var k in wieldable) {
+        if ("function" === typeof wieldable[k] && wieldable[k].name == "wieldable") {
+          o[k] = wieldable[k]();
+        }
+      }
+      return o;
+    }
     return d;
   };
-  wieldable.observe = (f) => {
-    l.push(f);
-    return {
-      stop: () => {
-        l.splice(l.indexOf(f),1)
-      },
-      start: () => l.push(f)
-    };
+  // (function)
+  // f: function to run when the value of the wieldable changes
+  wieldable.observe = f => {
+    if ("function" === typeof f) {
+      l.push(f);
+      return {
+        stop: () => {
+          l.splice(l.indexOf(f),1)
+        },
+        start: () => l.push(f)
+      };
+    }
   };
   // (DOM Element, String, Boolean) 
   // element: DOM Element to bind the wieldable to
@@ -80,7 +84,7 @@ var Wieldable = function(v){
           element[param] = "";
           d.forEach((el,index) => {
             var str = wieldable.template;
-            if ("object" == typeof el) {
+            if ("object" === typeof el) {
               for (k in el) {
                 str = str.split("${"+k+"}").join(el[k]);
               }
@@ -160,4 +164,5 @@ function WieldyScope(tar,model) {
     scope.run(tar);
   }
 }
+
 var W = new WieldyScope(document.body);
