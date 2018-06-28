@@ -19,12 +19,12 @@ var Wieldable = function(v){
           var r = d[func](...params); t();
           return r;
         }
-        wieldable.push    =  function ( ...params ) { arrayFunc( 'push',    ...params ) }
-        wieldable.pop     =  function ( ...params ) { arrayFunc( 'pop',     ...params ) }
-        wieldable.shift   =  function ( ...params ) { arrayFunc( 'shift',   ...params ) }
-        wieldable.unshift =  function ( ...params ) { arrayFunc( 'unshift', ...params ) }
-        wieldable.splice  =  function ( ...params ) { arrayFunc( 'splice',  ...params ) }
-        wieldable.slice   =  function ( ...params ) { arrayFunc( 'slice',   ...params ) }
+        wieldable.push    =  function ( ...params ) { return arrayFunc( 'push',    ...params ) }
+        wieldable.pop     =  function ( ...params ) { return arrayFunc( 'pop',     ...params ) }
+        wieldable.shift   =  function ( ...params ) { return arrayFunc( 'shift',   ...params ) }
+        wieldable.unshift =  function ( ...params ) { return arrayFunc( 'unshift', ...params ) }
+        wieldable.splice  =  function ( ...params ) { return arrayFunc( 'splice',  ...params ) }
+        wieldable.slice   =  function ( ...params ) { return arrayFunc( 'slice',   ...params ) }
         Object.defineProperty(wieldable, 'length',  { get: function(){ return d.length; } });
       } else if (typeof v === "object") {
         for (var k in v) {
