@@ -40,7 +40,7 @@ var Wieldable = function(v){
       }
       t();
     }
-    if ("object" === typeof d) {
+    if ("object" === typeof d && !(d instanceof Array) ) {
       var o = {};
       for (var k in wieldable) {
         if ("function" === typeof wieldable[k] && wieldable[k].name == "wieldable") {
