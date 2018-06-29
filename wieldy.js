@@ -1,34 +1,35 @@
-
 // (any)
 // v: any value you want to wield
-var Wieldable = function(v){
-  var d, l = [], t = () => {
-    for (var i = 0; i < l.length; i++) {
-      if (typeof l[i] === "function") {
-        l[i](d);
+var Wieldable = function(originalValue){
+  var data, callbacks = [];
+  function broadcast() {
+    for (var i = 0; i < callbacks.length; i++) {
+      if ("function" === typeof callbacks[i]) {
+        callbacks[i](data);
       }
     }
   };
   // (any)
   // v: any value you want to wield
-  var wieldable = function (v) {
-    if (v != undefined) {
-      d = v;
-      if (v instanceof Array) {
-        function arrayFunc(func, ...params) {
-          var r = d[func](...params); t();
-          return r;
+  var wieldable = function (value) {
+    if (value != undefined) {
+      data = value;
+      if (value instanceof Array) {
+        function methodWrapper(func, ...params) {
+          var result = data[func](...params);
+          broadcast();
+          return result;
         }
-        wieldable.push    =  function ( ...params ) { return arrayFunc( 'push',    ...params ) }
-        wieldable.pop     =  function ( ...params ) { return arrayFunc( 'pop',     ...params ) }
-        wieldable.shift   =  function ( ...params ) { return arrayFunc( 'shift',   ...params ) }
-        wieldable.unshift =  function ( ...params ) { return arrayFunc( 'unshift', ...params ) }
-        wieldable.splice  =  function ( ...params ) { return arrayFunc( 'splice',  ...params ) }
-        wieldable.slice   =  function ( ...params ) { return arrayFunc( 'slice',   ...params ) }
-        Object.defineProperty(wieldable, 'length',  { get: function(){ return d.length; } });
-      } else if (typeof v === "object") {
-        for (var k in v) {
-          wieldable[k] = new Wieldable(v[k]);
+        wieldable.push    =  function ( ...params ) { return methodWrapper( 'push',    ...params ); };
+        wieldable.pop     =  function ( ...params ) { return methodWrapper( 'pop',     ...params ); };
+        wieldable.shift   =  function ( ...params ) { return methodWrapper( 'shift',   ...params ); };
+        wieldable.unshift =  function ( ...params ) { return methodWrapper( 'unshift', ...params ); };
+        wieldable.splice  =  function ( ...params ) { return methodWrapper( 'splice',  ...params ); };
+        wieldable.slice   =  function ( ...params ) { return methodWrapper( 'slice',   ...params ); };
+        Object.defineProperty(wieldable, 'length',  { get: function() { return data.length; } } );
+      } else if ("object" === typeof value) {
+        for (var key in value) {
+          wieldable[key] = new Wieldable(value[key]);
         }
       } else { // Clear out helper functions if there
         if (wieldable.push)    { delete wieldable.push;    }
@@ -38,39 +39,45 @@ var Wieldable = function(v){
         if (wieldable.splice)  { delete wieldable.splice;  }
         if (wieldable.slice)   { delete wieldable.slice;   }
       }
-      t();
+      broadcast();
     }
-    if ("object" === typeof d && !(d instanceof Array) ) {
-      var o = {};
-      for (var k in wieldable) {
-        if ("function" === typeof wieldable[k] && wieldable[k].name == "wieldable") {
-          o[k] = wieldable[k]();
+    if (data instanceof Array) {
+      var tempArray = [];
+      for (var i = 0, callbacks = data.length; i < callbacks; i++) {
+        tempArray[i] = data[i];
+      }
+      return tempArray;
+    } else if ("object" === typeof data) {
+      var obj = {};
+      for (var key in wieldable) {
+        if ("function" === typeof wieldable[key] && "wieldable" == wieldable[key].name) {
+          obj[key] = wieldable[key]();
         }
       }
-      return o;
+      return obj;
     }
-    return d;
+    return data;
   };
   // (function)
   // f: function to run when the value of the wieldable changes
-  wieldable.observe = f => {
-    if ("function" === typeof f) {
-      l.push(f);
+  wieldable.observe = function (func) {
+    if ("function" === typeof func) {
+      callbacks.push(func);
       return {
-        stop: () => {
-          l.splice(l.indexOf(f),1)
+        stop: function () {
+          callbacks.splice(callbacks.indexOf(func),1)
         },
-        start: () => l.push(f)
+        start: function () { callbacks.push(func) }
       };
     }
   };
-  // (DOM Element, String, Boolean) 
+  // (DOM Element, String, Boolean)
   // element: DOM Element to bind the wieldable to
   // param: Name of event (if input is true) to update on, or DOM Element property to set when updated
   // input: wheather you are setting the wieldable on an event or getting it when changed
   wieldable.bind = function (element,param,input) {
     if (input) {
-      element.addEventListener(param, function(e) {
+      element.addEventListener(param, function () {
         wieldable(element.value);
       });
       if (element.value) wieldable(element.value);
@@ -79,14 +86,14 @@ var Wieldable = function(v){
       });
     } else {
       wieldable.template = element[param];
-      var observer = wieldable.observe(function(text) {
-        if (d instanceof Array && wieldable.template) {
+      var observer = wieldable.observe(function (text) {
+        if (data instanceof Array && wieldable.template) {
           element[param] = "";
-          d.forEach((el,index) => {
+          data.forEach((el,index) => {
             var str = wieldable.template;
             if ("object" === typeof el) {
-              for (k in el) {
-                str = str.split("${"+k+"}").join(el[k]);
+              for (var key in el) {
+                str = str.split("${"+key+"}").join(el[key]);
               }
             } else {
               str = str.split("${index}").join(index);
@@ -98,11 +105,12 @@ var Wieldable = function(v){
           element[param] = text;
         }
       });
-      element[param] = d;
+      element[param] = data;
       return observer;
     }
   }
-  wieldable(v);
+  wieldable.changed = broadcast();
+  wieldable(originalValue);
   return wieldable;
 };
 
@@ -113,6 +121,7 @@ function WieldyScope(tar,model) {
   var scope = this;
   scope.debug = false;
   scope.run = function (target) {
+
     target.querySelectorAll("[bind]").forEach(e=> {
       var bindings = e.getAttribute("bind"), input = false;
       if (!!bindings) {
@@ -127,25 +136,32 @@ function WieldyScope(tar,model) {
                 binding = binding.replace("-on","");
                 input = true;
               }
-              scope[binding] = scope[binding] || new Wieldable();
+              if (binding.replace(".","")!=binding) {
+                binding = eval("scope."+binding);
+                if (binding === undefined) {
+                  console.error(binding+" does note exist");
+                }
+              } else {
+                binding = scope[binding] = scope[binding] || new Wieldable();
+              }
               if (input) {
-                scope[binding].bind(e,param,true);
+                binding.bind(e,param,true);
                 scope.debug?console.log(e,param, true):null;
               } else {
-                scope[binding](!!e[param]?e[param]:"");
-                scope[binding].bind(e,param);
+                binding(!!e[param]?e[param]:"");
+                binding.bind(e,param);
                 if (e[param].match(/\$\{.*}/g) != null) {
-                  scope[binding]([]);
+                  binding([]);
                 }
                 scope.debug?console.log(e,param):null;
                 return scope;
               }
             } else {
-              console.log("No bindings were defined");
+              console.error("No bindings were defined");
               return false;
             }
           } else {
-            console.log("No bindings were defined");
+            console.error("No bindings were defined");
             return false;
           }
         })
