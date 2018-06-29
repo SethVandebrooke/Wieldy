@@ -96,9 +96,9 @@ var Wieldable = function(originalValue){
                 str = str.split("${"+key+"}").join(el[key]);
               }
             } else {
-              str = str.split("${index}").join(index);
               str = str.split("${value}").join(el);
             }
+            str = str.split("${index}").join(index);
             element[param] += str;
           })
         } else {
