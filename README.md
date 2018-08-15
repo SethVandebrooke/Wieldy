@@ -16,7 +16,9 @@ var app = new WieldyScope(document.body, {
 app.title() // Returns "This is the title"
 ```
 
-Simple Example Application:
+## Simple Example Application:
+You will notice that in this example "tasks" and "task" are not defined in the WieldyScope constructor.
+If a wieldable is referenced but does not exist, wieldy will create it in the scope.
 ```html
   <h1>Task manager</h1>
   <div id="main">
@@ -41,6 +43,40 @@ Simple Example Application:
   }
   </script>
 ```
+
+## Wieldy binding syntax
+Basic syntax is as follows, to bind a wieldable in the scope to an attribute (like href) or a property of the DOM element (like innerHTML) you simply provide the wieldable and the attribute, or property, you want to bind to seperated by a colon.
+```html
+<a bind="link:href"></a>
+<div bind="title:innerHTML"></div>
+```
+Now whenever those wieldables change, the attribute "href" and property "innerHTML" will update in real time.
+
+You can have multiple bindings by seperating them with commas:
+```html
+<a bind="link:href,title:innerHTML"></a>
+```
+
+## Binding on events
+Binding on an event means you are setting the value of a wieldable when the given event occurs.
+To bind to an event, you must use the "-on" after the wieldable is specified and preceed with the name of the event after the colon.
+
+Syntax: 
+```html
+<div bind="wieldable-on:event" value="value"></div>
+```
+
+For example: You can set a wieldable to the value of an attribute or DOM property like so:
+```html
+<button bind="title-on:click" value="New value">Click me</button>
+```
+
+Notice: The wieldable will be set to the value of the attribute on the element.
+If the element is an input of some kind, it will get the value of the input element.
+```html
+<input type="text" bind="title-on:keyup">
+```
+
 
 
 # Using Wieldables
