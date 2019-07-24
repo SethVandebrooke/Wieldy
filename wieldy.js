@@ -1,204 +1,166 @@
+function WieldyObservable(value) {
+    var data, listeners = new Set();
 
-// (any)
-// v: any value you want to wield
-var Wieldable = function(v){
-  var d, l = [], t = () => {
-    for (var i = 0; i < l.length; i++) {
-      if (typeof l[i] === "function") {
-        l[i](d);
-      }
+    function updateValue (value, dontSet, metaData) {
+        listeners.forEach(listener => listener(value, metaData || null));
+        if (!dontSet) { data = value; }
     }
-  };
-  // (any)
-  // v: any value you want to wield
-  var wieldable = function (v) {
-    if (v != undefined) {
-      d = v;
-      if (v instanceof Array) {
-        function arrayFunc(func, ...params) {
-          var r = d[func](...params); t();
-          return r;
-        }
-        wieldable.push    =  function ( ...params ) { return arrayFunc( 'push',    ...params ) }
-        wieldable.pop     =  function ( ...params ) { return arrayFunc( 'pop',     ...params ) }
-        wieldable.shift   =  function ( ...params ) { return arrayFunc( 'shift',   ...params ) }
-        wieldable.unshift =  function ( ...params ) { return arrayFunc( 'unshift', ...params ) }
-        wieldable.splice  =  function ( ...params ) { return arrayFunc( 'splice',  ...params ) }
-        wieldable.slice   =  function ( ...params ) { return arrayFunc( 'slice',   ...params ) }
-        Object.defineProperty(wieldable, 'length',  { get: function(){ return d.length; } });
-      } else if (typeof v === "object") {
-        for (var k in v) {
-          wieldable[k] = new Wieldable(v[k]);
-        }
-      } else { // Clear out helper functions if there
-        if (wieldable.push)    { delete wieldable.push;    }
-        if (wieldable.pop)     { delete wieldable.pop;     }
-        if (wieldable.shift)   { delete wieldable.shift;   }
-        if (wieldable.unshift) { delete wieldable.unshift; }
-        if (wieldable.splice)  { delete wieldable.splice;  }
-        if (wieldable.slice)   { delete wieldable.slice;   }
-      }
-      t();
-    }
-    if ("object" === typeof d && !(d instanceof Array) ) {
-      var o = {};
-      for (var k in wieldable) {
-        if ("function" === typeof wieldable[k] && wieldable[k].name == "wieldable") {
-          o[k] = wieldable[k]();
-        }
-      }
-      return o;
-    }
-    return d;
-  };
-  // (function)
-  // f: function to run when the value of the wieldable changes
-  wieldable.observe = f => {
-    if ("function" === typeof f) {
-      l.push(f);
-      return {
-        stop: () => {
-          l.splice(l.indexOf(f),1)
-        },
-        start: () => l.push(f)
-      };
-    }
-  };
-  // (DOM Element, String, Boolean) 
-  // element: DOM Element to bind the wieldable to
-  // param: Name of event (if input is true) to update on, or DOM Element property to set when updated
-  // input: wheather you are setting the wieldable on an event or getting it when changed
-  wieldable.bind = function (element,param,input) {
-    param = param.trim();
-    if (input) {
-      if (param.replace("key","")!==param&&param.replace("-","")!==param) {
-        param = param.split("-");
-        var key = param[0];
-        param = param[1];
-      }
-      element.addEventListener(param, function(e) {
-        if (key !== undefined) {
-          if (key == e.key || key == e.code || key == e.which) {
-            wieldable(element.value);
-          }
-        } else {
-          wieldable(element.value);
-        }
-      });
-      if (element.value) wieldable(element.value);
-      return wieldable.observe(function(text) {
-        element.value = text;
-      });
-    } else {
-      wieldable.template = element[param];
-      var observer = wieldable.observe(function(text) {
-        if (d instanceof Array && wieldable.template) {
-          element[param] = "";
-          d.forEach((el,index) => {
-            var str = wieldable.template;
-            if ("object" === typeof el) {
-              for (k in el) {
-                str = str.split("${"+k+"}").join(el[k]);
-              }
-            } else {
-              str = str.split("${index}").join(index);
-              str = str.split("${value}").join(el);
-            }
-            element[param] += str;
-          })
-        } else {
-          element[param] = text;
-        }
-      });
-      element[param] = d;
-      return observer;
-    }
-  }
-  wieldable.refresh = t;
-  wieldable(v);
-  return wieldable;
-};
 
-// (DOM Element, Object)
-// tar: target element to bind the scope to
-// model: an object of wieldable values inside the bound scope
-function WieldyScope(tar,model) {
-  var scope = this;
-  scope.debug = false;
-  scope.run = function (target) {
-    target.querySelectorAll("[bind]").forEach(e=> {
-      var bindings = e.getAttribute("bind"), input = false;
-      if (!!bindings) {
-        bindings = bindings.split(",");
-        bindings.forEach(function(params) {
-          if (params.match(":")!==null) {
-            params = params.split(":");
-            var binding = params[0];
-            var param = params[1];
-            if (!!binding && !!param) {
-              if (binding.match("-on")!==null) {
-                binding = binding.replace("-on","");
-                input = true;
-              }
-              binding = binding.trim();
-              console.log(scope[binding],typeof scope[binding])
-              if (typeof scope[binding] === "undefined") {
-                scope[binding] = new Wieldable();
-              }
-              if (input) {
-                if (scope[binding].name == "wieldable") {
-                  scope[binding].bind(e,param,true);
-                } else if ("function" == typeof scope[binding]) {
-                  if (param.replace("key","")!==param&&param.replace("-","")!==param) {
-                    param = param.split("-");
-                    var key = param[1];
-                    key = key.charAt(0).toUpperCase() + key.slice(1);
-                    param = param[0];
-                  }
-                  e.addEventListener(param, function(ev) {
-                    if (key !== undefined) {
-                      if (key == ev.key || key == ev.code || key == ev.which) {
-                        scope[binding](e.value);
-                      }
-                    } else {
-                      scope[binding](e.value);
-                    }
-                  });
+    function observable(value) {
+        var arrayOperations = ['push','pop','shift','unshift','slice','splice'];
+        if (Array.isArray(value)) {
+            arrayOperations.forEach(operation => {
+                observable[operation] = (...args) => {
+                    data[operation](...args);
+                    updateValue(value, true, {method:operation, args: args});
+                };
+            });
+            observable.set = (index,value) => {
+                data[index] = value;
+                updateValue(data, true, {method: "set", args: [index, value]});
+            };
+            updateValue(value);
+        } else if ("function" === typeof value) {
+            observable = function (v) {
+                if (v != undefined) {
+                    updateValue(value(v));
+                } else {
+                    return data;
                 }
-                scope.debug?console.log(e,param, true):null;
-              } else {
-                scope[binding](!!e[param]?e[param]:"");
-                scope[binding].bind(e,param);
-                if (e[param].match(/\$\{.*}/g) != null) {
-                  scope[binding]([]);
-                  scope[binding].observe(function(){
-                    scope.run(e);
-                  })
-                }
-                scope.debug?console.log(e,param):null;
-                return scope;
-              }
-            } else {
-              console.log("No bindings were defined");
-              return false;
+            };
+            observable.observe = listener => { listeners.add(listener); return listener; };
+            observable.ignore = listener => listeners.delete(listener);
+            observable.refresh = () => updateValue(observable(),true);
+        } else if ("object" === typeof value) {
+            data = {};
+            for (let k in value) {
+                data[k] = new Observable(value[k]);
+                data[k].observe(v => updateValue(data, true, {key: k, value: v}));
             }
-          } else {
-            console.log("No bindings were defined");
-            return false;
-          }
-        })
-      } else {
-        console.error("No bindings were defined");
-        return false;
-      }
-    });
-  }
-  if (model) {
-    for (var k in model) {
-      scope[k] = typeof model[k] == "function" ? model[k] : new Wieldable(model[k]);
+            observable.set = (key,value) => {
+                data[key] = value;
+                updateValue(data, true, {method: "set", key, value});
+            };
+            observable.delete = key => {
+                delete data[key];
+                updateValue(data, true, {method: "delete", key});
+            };
+            observable.objectLiteral = function () {
+                let result = {};
+                for (let k in data) {
+                    result[k] = data[k]();
+                }
+                return result;
+            };
+            updateValue(data);
+        } else if (value != undefined) {
+            updateValue(value);
+        }
+        if (!Array.isArray(data)) {
+            arrayOperations.forEach(operation => observable[operation] = undefined);
+            observable.set = undefined;
+        } else if ("object" != typeof data) {
+            observable.objectLiteral = undefined;
+            observable.set = undefined;
+        }
+        return data;
     }
-  }
-  if (tar) {
-    scope.run(tar);
-  }
+
+    observable.observe = listener => { listeners.add(listener); return listener; };
+    observable.ignore = listener => listeners.delete(listener);
+    observable.refresh = () => updateValue(observable(),true);
+    observable(value);
+    return observable;
+
 }
+
+function Wieldy(model, target) {
+    var supportedEvents = ['blur','change','input','click','dblclick','mouseover',
+        'mouseout','mouseenter','mouseleave','keyup','keydown','keypress'];
+    var supportedProperties = ['innerHTML','textContent','html','text','style'];
+    var propertyMap = {html:'innerHTML', text:'textContent'};
+    var templates = {};
+    for (var k in model) {
+        model[k] = new WieldyObservable(model[k]);
+    }
+    function renderTemplate(element, data) {
+        if (!templates[element]) {
+            templates[element] = element.innerHTML;
+        }
+        var output = "", template = templates[element];
+        if (Array.isArray(data)) {
+            data.forEach(function (item, index){
+                var temp = template;
+                if ('object' === typeof item) {
+                    for (var k in item) {
+                        temp = temp.split("{{" + k + "}}").join('function' === typeof item[k] ? item[k]() : item[k]);
+                    }
+                } else {
+                    temp = temp.split("{{value}}").join(item);
+                }
+                output += temp.split("{{index}}").join(index);
+            });
+        } else if ("object" === typeof data) {
+            var temp = template;
+            for (let k in data) {
+                temp = temp.split("{{"+k+"}}").join('function' === typeof data[k] ? data[k]() : data[k]);
+            }
+            output = temp;
+        }
+        element.innerHTML = output;
+        activate(element);
+    }
+    function activate(dom) {
+        var _args = [];
+        var _values = [];
+        for (var k in model){
+            _args.push(k);
+            _values.push(model[k]);
+        }
+        dom.querySelectorAll("[data-bind]").forEach(function (element){
+            let elementBindings = element.getAttribute('data-bind');
+            if (elementBindings !== null) {
+                elementBindings = elementBindings.split(".").join("().");
+                elementBindings = (new Function(..._args,"return ({"+elementBindings+"})"))(..._values);
+                for (let binding in elementBindings) {
+                    let ob = elementBindings[binding];
+                    if (supportedEvents.includes(binding)) {
+                        let tag = element.tagName.toLowerCase();
+                        if ((['input','select','textarea']).includes(tag)) {
+                            element.addEventListener(binding, function (){
+                                ob(element.value);
+                            });
+                            ob.observe(function (data) {
+                                element.value = data;
+                            });
+                            element.value = ob();
+                        } else {
+                            element.addEventListener(binding, function (ev) {
+                                ob(element.getAttribute('value') || ev);
+                            });
+                        }
+                    } else if (supportedProperties.includes(binding)) {
+                        binding = propertyMap[binding] || binding;
+                        ob.observe(function (data) {
+                            element[binding] = data;
+                        });
+                        element[binding] = ob();
+                    } else if (binding == "render") {
+                        ob.observe(function (data) {
+                            renderTemplate(element, data);
+                        });
+                    } else {
+                        ob.observe(function (data) {
+                            element.setAttribute(binding, data);
+                        });
+                        element.setAttribute(binding, ob());
+                    }
+                    ob.refresh();
+                }
+            }
+        });
+    }
+    activate(document || target);
+    return model;
+}
+
