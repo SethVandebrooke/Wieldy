@@ -77,7 +77,7 @@ function WieldyObservable(value) {
 function Wieldy(model, target) {
     var supportedEvents = ['blur','change','input','click','dblclick','mouseover',
         'mouseout','mouseenter','mouseleave','keyup','keydown','keypress'];
-    var supportedProperties = ['innerHTML','textContent','html','text','style'];
+    var supportedProperties = ['innerHTML','textContent','html','text','style','value'];
     var propertyMap = {html:'innerHTML', text:'textContent'};
     var templates = {};
     for (var k in model) {
